@@ -1,0 +1,16 @@
+{% extends "store/base.html" %}
+{% block content %}
+<h1>Order #{{ object.pk }}</h1>
+<p>Customer: {{ object.customer.name }}</p>
+<p>Order Date: {{ object.order_date }}</p>
+<p>Products:</p>
+<ul>
+    {% for product in object.products.all %}
+        <li>{{ product.name }} - ${{ product.price }}</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'order_update' object.pk %}">Edit</a> |
+<a href="{% url 'order_delete' object.pk %}">Delete</a> |
+<a href="{% url 'order_list' %}">Back to Order List</a>
+{% endblock %}

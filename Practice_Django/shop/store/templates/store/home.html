@@ -1,0 +1,9 @@
+{% extends "store/base.html" %}
+{% block content %}
+<h1>Welcome to Django Store</h1>
+<ul>
+    <li><a href="{% url 'product_list' %}">Product List</a></li>
+    <li><a href="{% url 'customer_list' %}">Customer List</a></li>
+    <li><a href="{% url 'order_list' %}">Order List</a></li>
+</ul>
+{% endblock %}
