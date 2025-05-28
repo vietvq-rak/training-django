@@ -1,0 +1,9 @@
+{% extends "store/base.html" %}
+{% block content %}
+<h1>{{ object.name }}</h1>
+<p>Email: {{ object.email }}</p>
+
+<a href="{% url 'customer_update' object.pk %}">Edit</a> |
+<a href="{% url 'customer_delete' object.pk %}">Delete</a> |
+<a href="{% url 'customer_list' %}">Back to Customer List</a>
+{% endblock %}
