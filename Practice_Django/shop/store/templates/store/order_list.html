@@ -1,14 +1,10 @@
-{% extends "store/base.html" %}
+{% extends 'store/base.html' %}
 {% block content %}
-<h1>Order List</h1>
-<a href="{% url 'order_create' %}">Create Order</a>   |
-<a href="{% url 'order_search' %}">Search Orders</a>
+<h2>Your Orders</h2>
+<a href="{% url 'order_create' %}">Create New Order</a>
 <ul>
     {% for order in object_list %}
-        <li>
-            <a href="{% url 'order_detail' order.pk %}">Order #{{ order.pk }} - {{ order.customer.name }}</a>
-        </li>
+    <li><a href="{% url 'order_detail' order.pk %}">Order #{{ order.id }}</a> - {{ order.date }} - {% if order.status %}Completed{% else %}Pending{% endif %}</li>
     {% endfor %}
 </ul>
-<a href="/">Back to Home</a>
 {% endblock %}

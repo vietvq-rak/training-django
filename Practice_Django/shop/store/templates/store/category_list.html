@@ -1,0 +1,26 @@
+{% extends 'store/base.html' %}
+
+{% block content %}
+<h2>Categories</h2>
+
+{% if perms.store.add_category %}
+  <a href="{% url 'category_create' %}">Add Category</a>
+{% endif %}
+
+<ul>
+  {% for category in object_list %}
+    <li>
+      {{ category.name }}
+
+      {% if perms.store.change_category %}
+        - <a href="{% url 'category_update' category.pk %}">Edit</a>
+      {% endif %}
+
+      {% if perms.store.delete_category %}
+        | <a href="{% url 'category_delete' category.pk %}">Delete</a>
+      {% endif %}
+
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

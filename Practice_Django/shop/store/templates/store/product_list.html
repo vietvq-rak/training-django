@@ -1,14 +1,28 @@
-{% extends "store/base.html" %}
+{% extends 'store/base.html' %}
+
 {% block content %}
-<h1>Product List</h1>
-<a href="{% url 'product_create' %}">Add Product</a>   |
-<a href="{% url 'product_search' %}">Search Product</a>
+<h2>Products</h2>
+
+{% if perms.store.add_product %}
+  <a href="{% url 'product_create' %}">Add Product</a>
+{% endif %}
+
 <ul>
-    {% for product in object_list %}
-        <li>
-            <a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a>
-            ({{ product.price }} USD)
-        </li>
-    {% endfor %}
+  {% for product in object_list %}
+    <li>
+      <a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a>
+      ({{ product.price }} USD)
+        ({{ product.category.name }})
+
+      {% if perms.store.change_product %}
+        - <a href="{% url 'product_update' product.pk %}">Edit</a>
+      {% endif %}
+
+      {% if perms.store.delete_product %}
+        | <a href="{% url 'product_delete' product.pk %}">Delete</a>
+      {% endif %}
+
+    </li>
+  {% endfor %}
 </ul>
 {% endblock %}

@@ -1,157 +1,171 @@
-from django.shortcuts import render
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, TemplateView
-from django.urls import reverse_lazy
+import json
 
-from .forms import SearchForm
-from .models import Product, Customer, Order
+from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.urls import reverse_lazy, reverse
+from django.views.generic import (
+    ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, TemplateView
+)
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from .models import Category, Product, Order, OrderItem
+from .forms import OrderForm, OrderItemForm, SignupForm
+from django.contrib.auth.models import Group
 
 
+# HOME
 class HomeView(TemplateView):
     template_name = 'store/home.html'
 
 
-# Product Views
+# CATEGORY
+class CategoryListView(LoginRequiredMixin, ListView):
+    model = Category
+    template_name = 'store/category_list.html'
 
-class ProductListView(ListView):
+
+class CategoryCreateView(LoginRequiredMixin, CreateView):
+    model = Category
+    fields = ['name']
+    template_name = 'store/category_form.html'
+    success_url = reverse_lazy('category_list')
+
+
+class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+    model = Category
+    fields = ['name']
+    template_name = 'store/category_form.html'
+    success_url = reverse_lazy('category_list')
+
+
+class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+    model = Category
+    template_name = 'store/category_delete.html'
+    success_url = reverse_lazy('category_list')
+
+
+# PRODUCT
+class ProductListView(LoginRequiredMixin, ListView):
     model = Product
     template_name = 'store/product_list.html'
 
 
-class ProductDetailView(DetailView):
+class ProductDetailView(LoginRequiredMixin, DetailView):
     model = Product
     template_name = 'store/product_detail.html'
 
 
-class ProductCreateView(CreateView):
+class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
-    fields = ['name', 'price']
+    fields = ['name', 'price', 'category', 'stock']
     template_name = 'store/product_form.html'
     success_url = reverse_lazy('product_list')
 
 
-class ProductUpdateView(UpdateView):
+class ProductUpdateView(LoginRequiredMixin, UpdateView):
     model = Product
-    fields = ['name', 'price']
+    fields = ['name', 'price', 'category', 'stock']
     template_name = 'store/product_form.html'
     success_url = reverse_lazy('product_list')
 
 
-class ProductDeleteView(DeleteView):
+
+class ProductDeleteView(LoginRequiredMixin, DeleteView):
     model = Product
-    template_name = 'store/product_confirm_delete.html'
+    template_name = 'store/product_delete.html'
     success_url = reverse_lazy('product_list')
 
 
-class ProductSearchView(FormView):
-    template_name = 'store/product_search.html'
-    form_class = SearchForm
+# ORDER
 
-    def get(self, request, *args, **kwargs):
-        form = self.get_form()
-        query = self.request.GET.get('query')
-        results = None
-        if query:
-            results = Product.objects.filter(name__icontains=query)
-        return self.render_to_response({
-            'form': form,
-            'query': query,
-            'results': results,
-        })
-
-
-
-# Customer Views
-class CustomerListView(ListView):
-    model = Customer
-    template_name = 'store/customer_list.html'
-
-
-class CustomerDetailView(DetailView):
-    model = Customer
-    template_name = 'store/customer_detail.html'
-
-
-class CustomerCreateView(CreateView):
-    model = Customer
-    fields = ['name', 'email']
-    template_name = 'store/customer_form.html'
-    success_url = reverse_lazy('customer_list')
-
-
-class CustomerUpdateView(UpdateView):
-    model = Customer
-    fields = ['name', 'email']
-    template_name = 'store/customer_form.html'
-    success_url = reverse_lazy('customer_list')
-
-
-class CustomerDeleteView(DeleteView):
-    model = Customer
-    template_name = 'store/customer_confirm_delete.html'
-    success_url = reverse_lazy('customer_list')
-
-
-class CustomerSearchView(FormView):
-    template_name = 'store/customer_search.html'
-    form_class = SearchForm
-
-    def get(self, request, *args, **kwargs):
-        form = self.get_form()
-        query = self.request.GET.get('query')
-        results = None
-        if query:
-            results = Customer.objects.filter(name__icontains=query)
-        return self.render_to_response({
-            'form': form,
-            'query': query,
-            'results': results,
-        })
-
-
-
-# Order Views
-class OrderListView(ListView):
+class OrderListView(LoginRequiredMixin, ListView):
     model = Order
     template_name = 'store/order_list.html'
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return Order.objects.all()
+        else:
+            return Order.objects.filter(customer=user)
 
-class OrderDetailView(DetailView):
+
+class OrderDetailView(LoginRequiredMixin, DetailView):
     model = Order
     template_name = 'store/order_detail.html'
 
+    def get_object(self, queryset=None):
+        order = super().get_object(queryset)
+        user = self.request.user
 
-class OrderCreateView(CreateView):
+        if user.is_superuser:
+            return order  # Superuser truy cập mọi thứ
+
+        if order.customer == user:
+            return order  # Customer chỉ truy cập được order của họ
+
+        raise PermissionDenied("Bạn không có quyền xem order này.")
+
+
+class OrderCreateView(LoginRequiredMixin, CreateView):
     model = Order
-    fields = ['customer', 'products']
+    form_class = OrderForm
     template_name = 'store/order_form.html'
-    success_url = reverse_lazy('order_list')
+
+    def form_valid(self, form):
+        form.instance.customer = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('order_detail', kwargs={'pk': self.object.pk})
 
 
-class OrderUpdateView(UpdateView):
+class OrderUpdateView(LoginRequiredMixin, UpdateView):
+    permission_required = 'store.change_order'
     model = Order
-    fields = ['customer', 'products']
+    form_class = OrderForm
     template_name = 'store/order_form.html'
-    success_url = reverse_lazy('order_list')
+
+    def get_queryset(self):
+        return Order.objects.filter(customer=self.request.user)
+
+    def get_success_url(self):
+        return reverse('order_detail', kwargs={'pk': self.object.pk})
 
 
-class OrderDeleteView(DeleteView):
+class OrderDeleteView(LoginRequiredMixin, DeleteView):
     model = Order
-    template_name = 'store/order_confirm_delete.html'
+    template_name = 'store/order_delete.html'
     success_url = reverse_lazy('order_list')
 
+    def get_queryset(self):
+        return Order.objects.filter(customer=self.request.user)
 
-class OrderSearchView(FormView):
-    template_name = 'store/order_search.html'
-    form_class = SearchForm
 
-    def get(self, request, *args, **kwargs):
-        form = self.get_form()
-        query = self.request.GET.get('query')
-        results = None
-        if query:
-            results = Order.objects.filter(customer__name__icontains=query)
-        return self.render_to_response({
-            'form': form,
-            'query': query,
-            'results': results,
-        })
+# ORDER ITEM
+class OrderItemCreateView(LoginRequiredMixin, FormView):
+    model = OrderItem
+    form_class = OrderItemForm
+    template_name = 'store/orderitem_form.html'
+
+    def form_valid(self, form):
+        order = get_object_or_404(Order, pk=self.kwargs['order_id'], customer=self.request.user)
+        item = form.save(commit=False)
+        item.order = order
+        item.price = item.product.price
+        item.save()
+        return redirect('order_detail', pk=order.pk)
+
+
+# SIGNUP
+class SignupView(CreateView):
+    form_class = SignupForm
+    template_name = 'store/signup.html'
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        print("Form is valid, saving user...")
+        user = form.save()
+        customer_group = Group.objects.get(name='Customers')
+        user.groups.add(customer_group)
+        return super().form_valid(form)
