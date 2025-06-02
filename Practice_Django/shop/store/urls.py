@@ -27,9 +27,12 @@ urlpatterns = [
     path('orders/', views.OrderListView.as_view(), name='order_list'),
     path('orders/add/', views.OrderCreateView.as_view(), name='order_create'),
     path('orders/<int:pk>/', views.OrderDetailView.as_view(), name='order_detail'),
-    path('orders/<int:pk>/edit/', views.OrderUpdateView.as_view(), name='order_edit'),
+    path('orders/<int:pk>/edit/', views.OrderUpdateView.as_view(), name='order_update'),
     path('orders/<int:pk>/delete/', views.OrderDeleteView.as_view(), name='order_delete'),
 
     # OrderItem
     path('orders/<int:order_id>/add_item/', views.OrderItemCreateView.as_view(), name='orderitem_create'),
+    path('orders/<int:order_id>/edit_item/<int:pk>', views.OrderItemUpdateView.as_view(), name='orderitem_update'),
+    path('orders/<int:order_id>/delete_item/<int:pk>/', views.OrderItemDeleteView.as_view(), name='orderitem_delete'),
+
 ]

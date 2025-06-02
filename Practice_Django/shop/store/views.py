@@ -7,7 +7,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, TemplateView
 )
 from django.shortcuts import get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Category, Product, Order, OrderItem
 from .forms import OrderForm, OrderItemForm, SignupForm
 from django.contrib.auth.models import Group
@@ -69,7 +69,6 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('product_list')
 
 
-
 class ProductDeleteView(LoginRequiredMixin, DeleteView):
     model = Product
     template_name = 'store/product_delete.html'
@@ -99,10 +98,10 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         user = self.request.user
 
         if user.is_superuser:
-            return order  # Superuser truy cập mọi thứ
+            return order
 
         if order.customer == user:
-            return order  # Customer chỉ truy cập được order của họ
+            return order
 
         raise PermissionDenied("Bạn không có quyền xem order này.")
 
@@ -121,13 +120,15 @@ class OrderCreateView(LoginRequiredMixin, CreateView):
 
 
 class OrderUpdateView(LoginRequiredMixin, UpdateView):
-    permission_required = 'store.change_order'
     model = Order
     form_class = OrderForm
     template_name = 'store/order_form.html'
 
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user)
+        if self.request.user.is_superuser:
+            return Order.objects.all()
+        elif self.request.user.is_active:
+            return Order.objects.filter(customer=self.request.user)
 
     def get_success_url(self):
         return reverse('order_detail', kwargs={'pk': self.object.pk})
@@ -139,22 +140,79 @@ class OrderDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('order_list')
 
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user)
+        if self.request.user.is_superuser:
+            return Order.objects.all()
+        elif self.request.user.is_active:
+            return Order.objects.filter(customer=self.request.user)
 
 
 # ORDER ITEM
-class OrderItemCreateView(LoginRequiredMixin, FormView):
+class OrderItemCreateView(LoginRequiredMixin, CreateView):
     model = OrderItem
     form_class = OrderItemForm
     template_name = 'store/orderitem_form.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        self.order = get_object_or_404(Order, pk=self.kwargs['order_id'])
+        if not (request.user.is_superuser or self.order.customer == request.user):
+            raise PermissionDenied("Bạn không có quyền thêm sản phẩm vào đơn này.")
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
-        order = get_object_or_404(Order, pk=self.kwargs['order_id'], customer=self.request.user)
         item = form.save(commit=False)
-        item.order = order
+        item.order = self.order
         item.price = item.product.price
         item.save()
-        return redirect('order_detail', pk=order.pk)
+        return redirect('order_detail', pk=self.order.pk)
+
+
+class OrderItemUpdateView(LoginRequiredMixin, UpdateView):
+    model = OrderItem
+    form_class = OrderItemForm
+    template_name = 'store/orderitem_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.item = self.get_object()
+        order = self.item.order
+        if not (request.user.is_superuser or order.customer == request.user):
+            raise PermissionDenied("Bạn không có quyền chỉnh sửa sản phẩm của đơn này.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        item = form.save(commit=False)
+        item.price = item.product.price
+        item.save()
+        return redirect('order_detail', pk=item.order.pk)
+
+
+class OrderItemDeleteView(LoginRequiredMixin, DeleteView):
+    model = OrderItem
+    template_name = 'store/orderitem_delete.html'
+
+    # def get_queryset(self):
+    #     order_id = self.kwargs['order_id']
+    #     return OrderItem.objects.filter(order__id=order_id, order__customer=self.request.user)
+    def dispatch(self, request, *args, **kwargs):
+        self.item = self.get_object()
+        order = self.item.order
+        if not (request.user.is_superuser or order.customer == request.user):
+            raise PermissionDenied("Bạn không có quyền chỉnh sửa sản phẩm của đơn này.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse('order_detail', kwargs={'pk': self.object.order.pk})
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        self.object.product.stock += self.object.quantity
+        self.object.product.save()
+
+        order_id = self.object.order.pk
+        success_url = reverse('order_detail', kwargs={'pk': order_id})
+
+        self.object.delete()
+        return redirect(success_url)
 
 
 # SIGNUP

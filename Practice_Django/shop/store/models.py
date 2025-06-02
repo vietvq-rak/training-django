@@ -24,7 +24,7 @@ class Order(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE)
     address = models.CharField(max_length=200)
     phone = models.CharField(max_length=20)
-    date = models.DateTimeField(auto_now_add=True)
+    date = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=False)
 
     def __str__(self):
@@ -32,6 +32,12 @@ class Order(models.Model):
 
     def get_total(self):
         return sum(item.get_total_price() for item in self.orderitem_set.all())
+
+    def delete(self, *args, **kwargs):
+        for item in self.orderitem_set.all():
+            item.product.stock += item.quantity
+            item.product.save()
+        super().delete(*args, **kwargs)
 
 
 class OrderItem(models.Model):
@@ -52,4 +58,22 @@ class OrderItem(models.Model):
                 raise ValueError("Số lượng trong kho không đủ!")
             self.product.stock -= self.quantity
             self.product.save()
+        else:
+            old_item = OrderItem.objects.get(pk=self.pk)
+            qty_diff = self.quantity - old_item.quantity
+
+            if qty_diff > 0:
+                if self.product.stock < qty_diff:
+                    raise ValueError("Số lượng trong kho không đủ để tăng!")
+                self.product.stock -= qty_diff
+            elif qty_diff < 0:
+                self.product.stock += abs(qty_diff)
+
+            self.product.save()
+
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.product.stock += self.quantity
+        self.product.save()
+        super().delete(*args, **kwargs)

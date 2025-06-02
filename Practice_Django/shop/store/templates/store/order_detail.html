@@ -16,6 +16,10 @@
         <td>{{ item.product.name }}</td>
         <td>{{ item.quantity }}</td>
         <td>{{ item.price }}</td>
+        <td>
+            <a href="{% url 'orderitem_update' order_id=order.pk pk=item.pk %}">Edit</a>
+            <a href="{% url 'orderitem_delete' order_id=order.pk pk=item.pk %}">Delete</a>
+        </td>
     </tr>
     {% endfor %}
 </table>

@@ -1,6 +1,6 @@
 {% extends 'store/base.html' %}
 {% block content %}
 <h2>Add Item to Order</h2>
-<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Add Item</button></form>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form>
 <a href="{% url 'order_list' %}">Back to Orders</a>
 {% endblock %}
