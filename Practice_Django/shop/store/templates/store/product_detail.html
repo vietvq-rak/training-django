@@ -1,0 +1,8 @@
+{% extends 'store/base.html' %}
+{% block content %}
+<h2>Product: {{ object.name }}</h2>
+<p>Price: {{ object.price }}</p>
+<p>Category: {{ object.category.name }}</p>
+<p>Stock: {{ object.stock }}</p>
+<a href="{% url 'product_list' %}">Back to list</a>
+{% endblock %}
