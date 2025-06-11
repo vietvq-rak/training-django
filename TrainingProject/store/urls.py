@@ -22,6 +22,11 @@ urlpatterns = [
     path('verify-reminder/', views.VerifyReminderView.as_view(), name='verify_reminder'),
     # Homes
     path('', views.HomeView.as_view(), name='home'),
+    # Categories
+    path('categories/', views.CategoryListView.as_view(), name='category_list'),
+    path('categories/add/', views.CategoryCreateView.as_view(), name='category_create'),
+    path('categories/<int:pk>/edit/', views.CategoryUpdateView.as_view(), name='category_update'),
+    path('categories/<int:pk>/delete/', views.CategoryDeleteView.as_view(), name='category_delete'),
 
 ]
 

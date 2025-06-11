@@ -1,5 +1,6 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
-from django.views.generic import TemplateView, CreateView
+from django.views.generic import TemplateView, CreateView, ListView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from .forms import SignupForm
 from django.contrib.auth.models import Group
@@ -8,6 +9,7 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404, render, redirect
 
 from .models import EmailVerification
+from .models import Category
 
 
 # HOME
@@ -35,9 +37,7 @@ class SignupView(CreateView):
     def form_valid(self, form):
         print("Form is valid, saving user...")
         user = form.save()
-
         verification = EmailVerification.objects.create(user=user)
-
         # Tạo link xác thực tuyệt đối
         verify_url = self.request.build_absolute_uri(
             reverse('email_verify', kwargs={'token': str(verification.token)})
@@ -56,7 +56,6 @@ class SignupView(CreateView):
 
         Trân trọng,
         """
-
         send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
         return super().form_valid(form)
 
@@ -65,22 +64,18 @@ class SignupView(CreateView):
         return super().form_invalid(form)
 
 
+# EMAIL VERIFICATION
 class EmailVerifyView(View):
     def get(self, request, token):
         verification = get_object_or_404(EmailVerification, token=token)
-
         if not verification.is_verified:
             verification.is_verified = True
             verification.save()
-
             user = verification.user
             user.save()
-
             customer_group = Group.objects.get(name='Customers')
             user.groups.add(customer_group)
-
             return render(request, 'store/email_verified.html')
-
         else:
             return render(request, 'store/email_already_verified.html')
 
@@ -88,3 +83,28 @@ class EmailVerifyView(View):
 class VerifyReminderView(TemplateView):
     template_name = 'store/verify_reminder.html'
 
+
+# CATEGORY
+class CategoryListView(LoginRequiredMixin, ListView):
+    model = Category
+    template_name = 'store/category_list.html'
+
+
+class CategoryCreateView(LoginRequiredMixin, CreateView):
+    model = Category
+    fields = ['name']
+    template_name = 'store/category_form.html'
+    success_url = reverse_lazy('category_list')
+
+
+class CategoryUpdateView(LoginRequiredMixin, UpdateView):
+    model = Category
+    fields = ['name']
+    template_name = 'store/category_form.html'
+    success_url = reverse_lazy('category_list')
+
+
+class CategoryDeleteView(LoginRequiredMixin, DeleteView):
+    model = Category
+    template_name = 'store/category_delete.html'
+    success_url = reverse_lazy('category_list')
