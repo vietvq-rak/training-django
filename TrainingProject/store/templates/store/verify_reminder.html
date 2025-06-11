@@ -1,0 +1,8 @@
+<h2>Bạn chưa xác thực email</h2>
+<p>Vui lòng kiểm tra email và nhấn vào link kích hoạt để tiếp tục sử dụng tài khoản.</p>
+<p>
+    <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit">Đăng xuất</button>
+    </form>
+</p>
