@@ -87,3 +87,4 @@ class EmailVerifyView(View):
 
 class VerifyReminderView(TemplateView):
     template_name = 'store/verify_reminder.html'
+
