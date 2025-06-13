@@ -1,0 +1,22 @@
+{% extends "store/base.html" %}
+{% block content %}
+<h1>Welcome to Django Store</h1>
+    {% if user.is_authenticated %}
+        <ul>
+            <li><a href="{% url 'product_list' %}">Product List</a></li>
+        </ul>
+        <p>Hello, {{ user.username }}!</p>
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+        <form action="{% url 'password_change' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Change Password</button>
+        </form>
+    {% else %}
+        <a href="{% url 'login' %}" class="btn">Sign In</a>
+        <a href="{% url 'signup' %}" class="btn">Sign Up</a>
+    {% endif %}
+
+{% endblock %}

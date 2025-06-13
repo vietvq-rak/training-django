@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Django Store</title>
+    <style>
+        .navbar {
+            background-color: #f2f2f2;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-left {
+            display: flex;
+            gap: 50px;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+    <h1><a href="/">Django Store</a></h1>
+    <div class="navbar">
+        <div class="navbar-left">
+            <a href="{% url 'product_list' %}?category=all{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}"
+               {% if category_id == 'all' or not category_id %}style="font-weight: bold;"{% endif %}>
+               All
+            </a>
+              {% for category in categories %}
+                  <a href="{% url 'product_list' %}?category={{ category.id }}">
+                      {{ category.name }} ({{ category.product_count }})
+                  </a>
+              {% endfor %}
+        </div>
+        {% if perms.store.add_category %}
+            <a href="{% url 'category_list' %}" style="color: red;">EDIT</a>
+        {% endif %}
+    </div>
+    <hr>
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>
