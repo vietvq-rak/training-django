@@ -1,0 +1,6 @@
+{% extends 'store/base.html' %}
+{% block content %}
+<h2>{% if object %}Edit Product{% else %}Add Product{% endif %}</h2>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form>
+<a href="{% url 'product_list' %}">Back to list</a>
+{% endblock %}

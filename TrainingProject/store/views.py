@@ -1,20 +1,26 @@
+import unicodedata
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
-from django.views.generic import TemplateView, CreateView, ListView, UpdateView, DeleteView
+from django.views.generic import TemplateView, CreateView, ListView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy, reverse
 from .forms import SignupForm
 from django.contrib.auth.models import Group
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import get_object_or_404, render, redirect
-
-from .models import EmailVerification
-from .models import Category
+from django.db.models import Count
+from .models import EmailVerification, Product, Category
 
 
 # HOME
 class HomeView(TemplateView):
     template_name = 'store/home.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.annotate(product_count=Count('products'))
+        return context
 
     def dispatch(self, request, *args, **kwargs):
         user = request.user
@@ -38,7 +44,6 @@ class SignupView(CreateView):
         print("Form is valid, saving user...")
         user = form.save()
         verification = EmailVerification.objects.create(user=user)
-        # Tạo link xác thực tuyệt đối
         verify_url = self.request.build_absolute_uri(
             reverse('email_verify', kwargs={'token': str(verification.token)})
         )
@@ -108,3 +113,74 @@ class CategoryDeleteView(LoginRequiredMixin, DeleteView):
     model = Category
     template_name = 'store/category_delete.html'
     success_url = reverse_lazy('category_list')
+
+
+# PRODUCT
+class ProductListView(LoginRequiredMixin, ListView):
+    model = Product
+    template_name = 'store/product_list.html'
+
+    def remove_accents(self, input_str):
+        nfkd_form = unicodedata.normalize('NFKD', input_str)
+        return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+    def get_queryset(self):
+        queryset = Product.objects.all()
+        query = self.request.GET.get('query', '')
+        category_id = self.request.GET.get('category', '')
+        sort = self.request.GET.get('sort', '')
+
+        if category_id and category_id != "all":
+            queryset = queryset.filter(category_id=category_id)
+
+        if query:
+            query_normalized = self.remove_accents(query).lower()
+            queryset = [p for p in queryset if query_normalized in self.remove_accents(p.name).lower()]
+
+        if sort == "price_asc":
+            queryset = queryset.order_by('price')
+        elif sort == "price_desc":
+            queryset = queryset.order_by('-price')
+        elif sort == "name_asc":
+            queryset = queryset.order_by('name')
+        elif sort == "name_desc":
+            queryset = queryset.order_by('-name')
+        elif sort == "newest":
+            queryset = queryset.order_by('-id')
+        elif sort == "oldest":
+            queryset = queryset.order_by('id')
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.request.GET.get('query', '')
+        context['category_id'] = self.request.GET.get('category', '')
+        context['categories'] = Category.objects.annotate(product_count=Count('products'))
+        context['sort'] = self.request.GET.get('sort', '')
+        return context
+
+
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    model = Product
+    template_name = 'store/product_detail.html'
+
+
+class ProductCreateView(LoginRequiredMixin, CreateView):
+    model = Product
+    fields = ['name', 'price', 'category', 'stock']
+    template_name = 'store/product_form.html'
+    success_url = reverse_lazy('product_list')
+
+
+class ProductUpdateView(LoginRequiredMixin, UpdateView):
+    model = Product
+    fields = ['name', 'price', 'category', 'stock']
+    template_name = 'store/product_form.html'
+    success_url = reverse_lazy('product_list')
+
+
+class ProductDeleteView(LoginRequiredMixin, DeleteView):
+    model = Product
+    template_name = 'store/product_delete.html'
+    success_url = reverse_lazy('product_list')

@@ -2,6 +2,9 @@
 {% block content %}
 <h1>Welcome to Django Store</h1>
     {% if user.is_authenticated %}
+        <ul>
+            <li><a href="{% url 'product_list' %}">Product List</a></li>
+        </ul>
         <p>Hello, {{ user.username }}!</p>
         <form action="{% url 'logout' %}" method="post" style="display:inline;">
             {% csrf_token %}

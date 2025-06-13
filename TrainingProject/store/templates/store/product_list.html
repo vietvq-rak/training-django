@@ -1,0 +1,55 @@
+{% extends 'store/base.html' %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div>
+    <h2 style="display: inline;">Products</h2>
+    {% if perms.store.add_product %}
+      <a href="{% url 'product_create' %}" style="margin-left: 15px;">Add Product</a>
+    {% endif %}
+  </div>
+
+  <div>
+    <form method="get" action="{% url 'product_list' %}" style="display: inline-flex; gap: 8px;">
+      <select name="category">
+        <option value="all">Toàn bộ</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == category_id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+        <select name="sort">
+          <option value="">-- Sắp xếp --</option>
+          <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Giá tăng dần</option>
+          <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Giá giảm dần</option>
+          <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>Tên A → Z</option>
+          <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Tên Z → A</option>
+          <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Mới nhất</option>
+          <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Cũ nhất</option>
+        </select>
+      <input type="text" name="query" placeholder="Nhập từ khóa để tìm kiếm..." value="{{ query }}">
+      <button type="submit">Tìm kiếm</button>
+    </form>
+  </div>
+</div>
+
+<ul>
+  {% for product in object_list %}
+    <li>
+      <a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a>
+      ({{ product.price }} USD)
+      ({{ product.category.name }})
+
+      {% if perms.store.change_product %}
+        - <a href="{% url 'product_update' product.pk %}">Edit</a>
+      {% endif %}
+
+      {% if perms.store.delete_product %}
+        | <a href="{% url 'product_delete' product.pk %}">Delete</a>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>Không có sản phẩm nào phù hợp.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
